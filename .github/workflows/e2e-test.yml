@@ -52,12 +52,12 @@ jobs:
           cache: 'maven'
       
       - name: Install pnpm
-        run: npm install -g pnpm
+        run: npm install -g pnpm@9.15.1  # 使用支持 Node 20 的 pnpm 版本
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'  # 升级到 Node.js 22 避免 pnpm 版本冲突
           cache: 'pnpm'
       
       - name: Setup Python
