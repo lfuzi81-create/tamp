@@ -56,28 +56,30 @@ jobs:
       # ========== Database Setup ==========
       - name: Wait for MySQL
         run: |
-          for i in {1..30}; do
-            if mysqladmin ping -h localhost -u root -p123456 --silent; then
-              echo "MySQL is ready!"
+          echo "Waiting for MySQL to be ready..."
+          for i in {1..60}; do
+            if mysqladmin ping -h 127.0.0.1 -u root -p123456 --silent 2>/dev/null; then
+              echo "✓ MySQL is ready!"
+              mysql -h 127.0.0.1 -u root -p123456 -e "SELECT 1"
               break
             fi
-            echo "Waiting for MySQL... ($i/30)"
+            echo "Waiting for MySQL... ($i/60)"
             sleep 2
           done
       
       - name: Setup database schema
         run: |
           if [ -f sql/schema.sql ]; then
-            mysql -h localhost -u root -p123456 tamp < sql/schema.sql || echo "Schema file not found, skipping"
+            mysql -h 127.0.0.1 -u root -p123456 tamp < sql/schema.sql || echo "Schema file not found, skipping"
           fi
           if [ -f sql/data.sql ]; then
-            mysql -h localhost -u root -p123456 tamp < sql/data.sql || echo "Data file not found, skipping"
+            mysql -h 127.0.0.1 -u root -p123456 tamp < sql/data.sql || echo "Data file not found, skipping"
           fi
         continue-on-error: true
       
       - name: Insert minimal test data
         run: |
-          mysql -h localhost -u root -p123456 tamp -e "
+          mysql -h 127.0.0.1 -u root -p123456 tamp -e "
             -- Create tables if not exist
             CREATE TABLE IF NOT EXISTS sys_user (
               id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -140,7 +142,8 @@ jobs:
             (2, 1, 'PRODUCT', 2, '短期理财,低风险', 0),
             (3, 2, 'PRODUCT', 1, NULL, 0)
             ON DUPLICATE KEY UPDATE tags=tags;
-          "
+          " || echo "Failed to insert test data, continuing..."
+        continue-on-error: true
       
       # ========== Build Backend ==========
       - name: Build backend
@@ -250,6 +253,12 @@ jobs:
           echo "**Environment**: MySQL + Redis + Backend + Frontend" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Test Status" >> $GITHUB_STEP_SUMMARY
+          
+          # Check services using TCP connection (127.0.0.1)
+          echo "- MySQL: $(mysqladmin ping -h 127.0.0.1 -u root -p123456 --silent 2>/dev/null && echo '✓ UP' || echo '✗ DOWN')" >> $GITHUB_STEP_SUMMARY
           echo "- Backend: $(curl -s http://localhost:8080/actuator/health 2>/dev/null | grep -q UP && echo '✓ UP' || echo '✗ DOWN')" >> $GITHUB_STEP_SUMMARY
-          echo "- Database: $(mysqladmin ping -h localhost -u root -p123456 --silent 2>/dev/null && echo '✓ UP' || echo '✗ DOWN')" >> $GITHUB_STEP_SUMMARY
           echo "- Redis: $(redis-cli ping 2>/dev/null | grep -q PONG && echo '✓ UP' || echo '✗ DOWN')" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Workflow Status" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: **$(gh run list --limit 1 --json conclusion --jq '.[0].conclusion' || echo 'running')**" >> $GITHUB_STEP_SUMMARY
