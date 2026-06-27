@@ -1,0 +1,234 @@
+name: TAMP E2E Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      test_scope:
+        description: 'Test scope (all, smoke, critical)'
+        required: false
+        default: 'critical'
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: 123456
+          MYSQL_DATABASE: tamp
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      
+      - name: Install pnpm
+        run: npm install -g pnpm
+      
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      
+      - name: Install Python dependencies
+        run: |
+          pip install playwright requests redis pymysql
+          playwright install chromium
+      
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for MySQL..."
+          while ! mysqladmin ping -h localhost -u root -p123456 --silent; do
+            sleep 1
+          done
+          echo "MySQL is ready!"
+          
+          echo "Waiting for Redis..."
+          while ! redis-cli ping | grep -q PONG; do
+            sleep 1
+          done
+          echo "Redis is ready!"
+      
+      - name: Setup database schema
+        run: |
+          mysql -h localhost -u root -p123456 tamp < backend/database/schema.sql
+        continue-on-error: true
+      
+      - name: Insert test data
+        run: |
+          mysql -h localhost -u root -p123456 tamp -e "
+            -- Insert test users
+            INSERT INTO sys_user (id, phone, password, role, status, created_at, updated_at) VALUES
+            (100, '13800000001', '\$2a\$10\$testpasswordhash', 'HQ_ADMIN', 1, NOW(), NOW()),
+            (101, '13800000002', '\$2a\$10\$testpasswordhash', 'SHOP_ADMIN', 1, NOW(), NOW()),
+            (102, '13800000003', '\$2a\$10\$testpasswordhash', 'INVESTOR', 1, NOW(), NOW())
+            ON DUPLICATE KEY UPDATE password=password;
+            
+            -- Insert test shops
+            INSERT INTO biz_shop (id, name, status, created_at, updated_at) VALUES
+            (1, 'Test Shop 1', 1, NOW(), NOW()),
+            (2, 'Test Shop 2', 1, NOW(), NOW())
+            ON DUPLICATE KEY UPDATE name=name;
+            
+            -- Insert test products
+            INSERT INTO biz_product (id, name, code, category, status, created_at, updated_at) VALUES
+            (1, 'Test Product 1', 'P001', '固定收益类', 1, NOW(), NOW()),
+            (2, 'Test Product 2', 'P002', '权益类', 1, NOW(), NOW())
+            ON DUPLICATE KEY UPDATE name=name;
+            
+            -- Insert test shelf items with tags
+            INSERT INTO biz_shelf_item (id, shop_id, item_type, item_id, tags, is_deleted, created_at, updated_at) VALUES
+            (1, 1, 'PRODUCT', 1, '高收益,稳健型', 0, NOW(), NOW()),
+            (2, 1, 'PRODUCT', 2, '短期理财,低风险', 0, NOW(), NOW()),
+            (3, 2, 'PRODUCT', 1, NULL, 0, NOW(), NOW())
+            ON DUPLICATE KEY UPDATE tags=tags;
+          "
+      
+      - name: Build backend
+        run: |
+          cd backend
+          mvn clean package -DskipTests -pl tamp-bootstrap -am
+      
+      - name: Start backend service
+        run: |
+          cd backend/tamp-bootstrap
+          java -jar target/tamp-bootstrap-*.jar &
+          echo "Backend starting..."
+          sleep 30
+          
+          # Wait for backend to be ready
+          for i in {1..30}; do
+            if curl -s http://localhost:8080/actuator/health | grep -q UP; then
+              echo "Backend is ready!"
+              break
+            fi
+            echo "Waiting for backend... ($i/30)"
+            sleep 5
+          done
+      
+      - name: Build frontend
+        run: |
+          cd frontend/hq-admin
+          pnpm install
+          pnpm build
+          
+          cd ../shop-admin
+          pnpm install
+          pnpm build
+          
+          cd ../investor-app
+          pnpm install
+          pnpm build
+      
+      - name: Start frontend services
+        run: |
+          cd frontend/hq-admin
+          pnpm preview --port 3002 &
+          
+          cd ../shop-admin
+          pnpm preview --port 5173 &
+          
+          cd ../investor-app
+          pnpm preview --port 3003 &
+          
+          sleep 10
+          echo "Frontend services started"
+      
+      - name: Mock login and setup tokens
+        run: |
+          python3 scripts/mock_login_github_actions.py
+      
+      - name: Run Playwright E2E tests
+        run: |
+          python3 scripts/run_e2e_tests_github_actions.py
+        env:
+          TEST_SCOPE: ${{ github.event.inputs.test_scope || 'critical' }}
+      
+      - name: Upload test screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-screenshots
+          path: test-results/screenshots/
+          retention-days: 30
+      
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-report
+          path: test-results/report.html
+          retention-days: 30
+      
+      - name: Upload test logs
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-logs
+          path: test-results/logs/
+          retention-days: 7
+      
+      - name: Comment PR with test results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            // Read test report
+            let report = '';
+            try {
+              report = fs.readFileSync('test-results/summary.md', 'utf8');
+            } catch (e) {
+              report = 'Test report not found';
+            }
+            
+            // Create comment
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## E2E Test Results\n\n${report}\n\n[View full report](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`
+            });
+      
+      - name: Stop services
+        if: always()
+        run: |
+          pkill -f 'java.*tamp-bootstrap' || true
+          pkill -f 'pnpm preview' || true
