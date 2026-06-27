@@ -228,6 +228,13 @@ jobs:
           fi
         continue-on-error: true
       
+      - name: Run Full Business Scenario tests (245+)
+        run: |
+          if [ -f scripts/full_business_scenarios_test.py ]; then
+            python3 scripts/full_business_scenarios_test.py || echo "Full business tests failed"
+          fi
+        continue-on-error: true
+      
       # ========== Generate Reports ==========
       - name: Create test results directory
         run: mkdir -p test-results/screenshots
