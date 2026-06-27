@@ -221,6 +221,13 @@ jobs:
           fi
         continue-on-error: true
       
+      - name: Run Core Business Scenario tests
+        run: |
+          if [ -f scripts/core_business_scenarios_test.py ]; then
+            python3 scripts/core_business_scenarios_test.py || echo "Core business tests failed"
+          fi
+        continue-on-error: true
+      
       # ========== Generate Reports ==========
       - name: Create test results directory
         run: mkdir -p test-results/screenshots
