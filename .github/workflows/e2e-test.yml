@@ -51,6 +51,9 @@ jobs:
           java-version: '21'
           cache: 'maven'
       
+      - name: Install pnpm
+        run: npm install -g pnpm
+      
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
