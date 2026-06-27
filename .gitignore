@@ -1,0 +1,40 @@
+# Maven
+backend/**/target/
+backend/**/*.jar
+backend/**/*.class
+
+# Node.js
+frontend/**/node_modules/
+frontend/**/dist/
+frontend/.pnpm-store/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test results
+test-results/
+*.png
+*.html
+
+# Temp files
+*.log
+*.tmp
+*.bak
+
+# Environment
+.env
+.env.local
+
+# Build
+build/
+out/
+
+# Cache
+.cache/
+.pnpm-store/

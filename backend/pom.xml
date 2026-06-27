@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.14</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.tamp</groupId>
+    <artifactId>tamp</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>TAMP</name>
+    <description>TAMP — Trust &amp; Asset Management Platform 全栈应用系统</description>
+
+    <modules>
+        <module>tamp-common</module>
+        <module>tamp-auth</module>
+        <!-- L1: 独立业务域 -->
+        <module>tamp-product</module>
+        <module>tamp-content</module>
+        <module>tamp-client</module>
+        <module>tamp-organization</module>
+        <!-- L2: 依赖域 -->
+        <module>tamp-shelf</module>
+        <module>tamp-dashboard</module>
+        <module>tamp-user</module>
+        <!-- 启动聚合 -->
+        <module>tamp-bootstrap</module>
+    </modules>
+
+    <properties>
+        <java.version>25</java.version>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <jjwt.version>0.12.6</jjwt.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- 内部模块 — L0 基础层 -->
+            <dependency><groupId>com.tamp</groupId><artifactId>tamp-common</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.tamp</groupId><artifactId>tamp-auth</artifactId><version>${project.version}</version></dependency>
+
+            <!-- 内部模块 — L1 独立业务域 -->
+            <dependency><groupId>com.tamp</groupId><artifactId>tamp-product</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.tamp</groupId><artifactId>tamp-content</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.tamp</groupId><artifactId>tamp-client</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.tamp</groupId><artifactId>tamp-organization</artifactId><version>${project.version}</version></dependency>
+
+            <!-- 内部模块 — L2 依赖域 -->
+            <dependency><groupId>com.tamp</groupId><artifactId>tamp-shelf</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.tamp</groupId><artifactId>tamp-dashboard</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>com.tamp</groupId><artifactId>tamp-user</artifactId><version>${project.version}</version></dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <configuration>
+                        <excludes>
+                            <exclude>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                            </exclude>
+                        </excludes>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.tamp</groupId>
+        <artifactId>tamp</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>tamp-bootstrap</artifactId>
+    <name>TAMP Bootstrap</name>
+    <description>启动聚合模块：聚合所有子模块，包含主配置和启动入口（非网关，真正的反向代理是 Nginx）</description>
+
+    <dependencies>
+        <!-- 公共基础 -->
+        <dependency><groupId>com.tamp</groupId><artifactId>tamp-common</artifactId></dependency>
+
+        <!-- 认证鉴权 -->
+        <dependency><groupId>com.tamp</groupId><artifactId>tamp-auth</artifactId></dependency>
+
+        <!-- L1 业务域 -->
+        <dependency><groupId>com.tamp</groupId><artifactId>tamp-product</artifactId></dependency>
+        <dependency><groupId>com.tamp</groupId><artifactId>tamp-content</artifactId></dependency>
+        <dependency><groupId>com.tamp</groupId><artifactId>tamp-client</artifactId></dependency>
+        <dependency><groupId>com.tamp</groupId><artifactId>tamp-organization</artifactId></dependency>
+
+        <!-- L2 依赖域 -->
+        <dependency><groupId>com.tamp</groupId><artifactId>tamp-shelf</artifactId></dependency>
+        <dependency><groupId>com.tamp</groupId><artifactId>tamp-dashboard</artifactId></dependency>
+        <dependency><groupId>com.tamp</groupId><artifactId>tamp-user</artifactId></dependency>
+
+        <!-- 运行时 -->
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-data-jpa</artifactId></dependency>
+        <dependency><groupId>com.mysql</groupId><artifactId>mysql-connector-j</artifactId><scope>runtime</scope></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-data-redis</artifactId></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-configuration-processor</artifactId><optional>true</optional></dependency>
+        <dependency><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><optional>true</optional></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.tamp.TampApplication</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
